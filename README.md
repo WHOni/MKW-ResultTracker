@@ -1,4 +1,5 @@
 DO NOT replace your "Results.json" file when updating.
+Program has to be in same folder as the "Images" folder and the "Results.json" file.
 
 Executable file in the zip was created using "pyinstaller" so neither Python nor necessary libraries are necessary to run the program.
 
