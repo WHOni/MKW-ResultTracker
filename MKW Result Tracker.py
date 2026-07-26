@@ -106,6 +106,9 @@ def delete_placement(t):
         
         Confirmation = Label(PF, 16, text = f"Last {mode} Placement for {t} deleted.", bg = "#000000", fg = "#FFFF00")
         Confirmation.put(0, 0, 670, 270)
+        
+        most_played()
+        averages()
     
     if len(r[mode][t]) == 0:
         NoPlacements = Label(PF, 16, text = f"No {mode} Placements registered yet on\n{t}.", bg = "#000000", fg = "#FFAAAA")
@@ -180,7 +183,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         
-        self.version = "v1.0.0"
+        self.version = "v1.0.1"
         self.font = "Calibri"
         
 class Toplevel(tk.Toplevel):
