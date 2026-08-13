@@ -1,0 +1,11 @@
+DO NOT replace your "Results.json" file when updating.
+Program has to be in same folder as the "Images" folder and the "Results.json" file.
+
+Executable file in the zip was created using "pyinstaller" so neither Python nor necessary libraries are necessary to run the program.
+
+Controls:
+- Click Button at the top to switch between 12P and 24P
+- Click Track, then Placement to register Race
+- Right-Click Track, then confirm below to delete a registered Placement (for misinputs)
+
+<img width="1587" height="912" alt="image" src="https://github.com/user-attachments/assets/e6090b2d-ff10-41be-8abd-a2f0bb4ea7f5" />
