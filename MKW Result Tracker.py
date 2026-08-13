@@ -1,20 +1,29 @@
 import tkinter as tk
 import json
 from PIL import ImageTk, Image
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 def start():
-    global mode, ModeButton, SF, TF, PF, LF, MF, AF
+    global mode, lounge, ModeButton, LoungeButton, SF, TF, PF, LF, MF, AF
     
     app.title(f"MKW Result Tracker {app.version} - WHOni")
     app.geometry("1585x880+100+100")
     
     load_images()
     
+    White = Label(app, bg = "#FFFFFF")
+    White.put(0, 0, 1585, 880)
+    
     SF = Frame(app, bg = "#000000") #Settings Frame
     SF.put(0, 0, 1585, 40)
     mode = "12P"
     ModeButton = Button(SF, 16, text = mode, bg = "#000000", fg = "#FFFFFF", command = lambda: switch_mode())
     ModeButton.put(740, 5, 105, 30)
+    
+    lounge = False
+    LoungeButton = Button(SF, 16, text = f"Start {mode} Lounge", bg = "#000000", fg = "#FFFFFF", command = lambda: start_lounge())
+    LoungeButton.put(10, 5, 200, 30)
     
     TF = Frame(app, bg = "#000000") #Track Frame
     TF.put(0, 45, 670, 560)
@@ -53,12 +62,20 @@ def load_images():
 def switch_mode():
     global mode
     
+    if lounge: return
     mode = "12P" if mode == "24P" else "24P"
     most_played()
     averages()
     PF.clear()
     
     ModeButton.config(text = mode)
+    LoungeButton.config(text = f"Start {mode} Lounge")
+    
+def start_lounge():
+    global lounge, l
+    
+    lounge = True
+    l = Lounge()
 
 def select_track(t):
     def cancel():
@@ -74,11 +91,20 @@ def select_track(t):
         Confirmation = Label(PF, 16, text = f"{mode} Placement registered for {t}:\n{p}", bg = "#000000", fg = "#00FF00")
         Confirmation.put(0, 0, 670, 270)
         
+        if lounge: 
+            l.results.append((t, p))
+            l.finish_race()
+        
         last_races(0)
         most_played()
         averages()
     
     PF.clear()
+    
+    if lounge and l.races == 12:
+        LoungeOver = Label(PF, 16, text = "Your Lounge is over.\nFinish it first before registering another race.", bg = "#000000", fg = "#FFAAAA")
+        LoungeOver.put(0, 0, 670, 270)
+        return
     
     Title = Label(PF, 16, text = f"{mode} - {t}", bg = "#000000", fg = "#FFFFFF")
     Title.put(0, 0, 670, 25)
@@ -122,7 +148,7 @@ def delete_placement(t):
         ConfirmButton.put(345, 220, 100, 40)
 
 def last_races(sc):
-    if sc < 0 or len(session) <= sc: return
+    if sc < 0 or len(session) <= sc or lounge: return
     
     LF.clear()
     
@@ -183,7 +209,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         
-        self.version = "v1.0.1"
+        self.version = "v1.1.0"
         self.font = "Calibri"
         
 class Toplevel(tk.Toplevel):
@@ -238,8 +264,12 @@ class Button(tk.Button):
     
 class ResultDict(dict):
     def __init__(self):
-        with open("Results.json", "r") as file:
-            data = json.load(file)
+        try:
+            with open("Results.json", "r") as file:
+                data = json.load(file)
+        except Exception:
+            data = {"12P": {track: [] for track in tracks},
+                     "24P": {track: [] for track in tracks}}
         
         super().__init__(data)
         
@@ -247,10 +277,138 @@ class ResultDict(dict):
         with open("Results.json", "w") as file:
             json.dump(self, file)
     
-tracks = ["Mario Bros. Circuit", "Crown City", "Whistlestop Summit", "DK Spaceport", "Desert Hills", "Shy Guy Bazaar", "Wario Stadium", "Airship Fortress",
-          "DK Pass", "Starview Peak", "Sky-High Sundae", "Wario Shipyard", "Koopa Troopa Beach", "Faraway Oasis", "Peach Beach",
-          "Salty Salty Speedway", "Dino Dino Jungle", "Great Q. Block Ruins", "Cheep Cheep Falls", "Dandelion Depths", "Boo Cinema", "Dry Bones Burnout",
-          "Moo Moo Meadows", "Choco Mountain", "Toads Factory", "Bowsers Castle", "Acorn Heights", "Mario Circuit", "Peach Stadium", "Rainbow Road"]
+class Lounge():
+    def __init__(self):
+        self.frame = Frame(SF, bg = "#000000")
+        self.frame.put(0, 0, 1585, 40)
+        self.mode = mode
+        self.races = 0
+        self.progress = Label(self.frame, 16, text = f"{mode} Lounge in progress: {self.races} / 12 Races", bg = "#000000", fg = "#00FF00")
+        self.progress.put(0, 0, 1585, 40)
+        
+        self.ov = Frame(LF, bg = "#000000")
+        self.ov.put(0, 0, 300, 835)
+        Title = Label(self.ov, 16, bg = "#000000", fg = "#FFFFFF", text = "Lounge Results")
+        Title.put(0, 0, 300, 25)
+        WhiteBG = Label(self.ov, bg = "#FFFFFF")
+        WhiteBG.put(0, 685, 300, 150)
+        PointsTitle = Label(self.ov, 32, bg = "#000000", fg = "#FFFFFF", text = "Points:")
+        PointsTitle.put(0, 690, 180, 100)
+        self.results = []
+        self.points = 0
+        self.pointlabel = Label(self.ov, 32, bg = "#000000", fg = "#FFFFFF", text = self.points)
+        self.pointlabel.put(185, 690, 115, 100)
+        self.avg = Label(self.ov, 16, bg = "#000000", fg = "#FFFFFF", text = "Current Average: 0")
+        self.avg.put(0, 795, 300, 35)
+        
+        UndoLast = Button(self.ov, 16, bg = "#000000", fg = "#FFAAAA", text = "Delete last race", command = lambda: self.clear_race())
+        UndoLast.put(10, 605, 280, 30)
+        self.finish = Button(self.ov, 16, bg = "#000000", fg = "#FFAAAA", text = "Finish Lounge", command = lambda: self.finish_lounge())
+        self.finish.put(10, 645, 280, 30)
+        
+        self.raceframes = []
+        for rc in range(12):
+            RaceFrame = Frame(self.ov, bg = "#000000")
+            RaceFrame.put(0, 35 + rc * 30, 300, 25)
+            self.raceframes.append(RaceFrame)
+            
+        self.fig = Figure(figsize = (10, 8), dpi = 100, facecolor = "#000000")
+        self.fig.subplots_adjust(left = 0.15, right = 0.95, top = 0.95, bottom = 0.15)
+        self.plot = self.fig.add_subplot(1, 1, 1)
+        self.plot.set_facecolor("#111111")
+        
+        self.canvas = FigureCanvasTkAgg(self.fig, master = self.ov)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().place(x = 5, y = 395, width = 290, height = 200)
+        
+        self.graph()
+        
+    def finish_race(self):
+        self.enter_race(self.races)
+        
+        self.races += 1
+        self.progress.config(text = f"{mode} Lounge in progress: {self.races} / 12 Races")
+        
+        self.update()
+    
+    def clear_race(self):
+        if self.races == 0: return
+        
+        self.races -= 1
+        rm = self.races
+        self.raceframes[rm].clear()
+        r[mode][self.results[rm][0]].pop(len(r[mode][self.results[rm][0]]) - 1)
+        r.save()
+        self.results.pop(len(self.results) - 1)
+        
+        self.progress.config(text = f"{mode} Lounge in progress: {self.races} / 12 Races")
+        
+        self.update()
+        
+    def update(self):
+        avg = round(self.races * (82 if mode == '12P' else 72) / 12, 1)
+        self.avg.config(text = f"Current Average: {avg}")
+        
+        self.points = sum([points[mode][x[1] - 1] for x in self.results])
+        
+        self.pointlabel.config(text = self.points, fg = "#FF0000" if self.points < avg else "#00FF00" if self.points > avg else "#FFFF00")
+        
+        if self.races == 12:
+            self.finish.config(fg = "#AAFFAA")
+        else:
+            self.finish.config(fg = "#FFAAAA")
+            
+        self.graph()
+        
+        most_played()
+        averages()
+        
+    def enter_race(self, rc):
+        self.raceframes[rc].clear()
+        RaceNumber = Label(self.raceframes[rc], 12, bg = "#220022", fg = "#FFFFFF", text = f"{rc + 1})")
+        RaceNumber.put(5, 0, 30, 25)
+        Track = Label(self.raceframes[rc], 12, bg = "#220022", fg = "#FFFFFF", text = self.results[rc][0])
+        Track.put(40, 0, 160, 25)
+        Place = Label(self.raceframes[rc], 12, bg = "#220022", fg = "#FFFFFF", text = self.results[rc][1])
+        Place.put(205, 0, 40, 25)
+        Points = Label(self.raceframes[rc], 12, bg = "#220022", fg = "#FFFFFF", text = f"{points[mode][self.results[rc][1] - 1]} P.")
+        Points.put(250, 0, 45, 25)
+        
+    def graph(self):
+        self.plot.clear()
+        self.plot.set_xlim(0, 12)
+        self.plot.set_xticks([x for x in range(13)])
+        self.plot.set_xticklabels([x for x in range(13)], color = "#FFFFFF")
+        
+        maxi = max([82 if mode == "12P" else 72, self.points])
+        self.plot.set_ylim(0, maxi)
+        self.plot.set_yticks([x * 10 for x in range(maxi // 10 + 1)])
+        self.plot.set_yticklabels([x * 10 for x in range(maxi // 10 + 1)], color = "#FFFFFF")
+        self.plot.grid(True, which = "both", linestyle = "--", linewidth = 0.2, alpha = 0.8)
+        
+        self.plot.tick_params(axis = "both", colors = "#FFFFFF")
+        
+        self.plot.plot([x for x in range(13)], [x * (82 if mode == "12P" else 72) / 12 for x in range(13)], color = "#666666", linewidth = 1)
+        point_history = [0]
+        for x in self.results:
+            point_history.append(point_history[len(point_history) - 1] + points[mode][x[1] - 1])
+        self.plot.plot(range(len(point_history)), point_history, color = "#00FFFF", linewidth = 1)
+        self.canvas.draw()
+        
+    def finish_lounge(self):
+        global lounge
+        
+        self.frame.destroy()
+        self.ov.destroy()
+        lounge = False
+        last_races(0)
+    
+tracks = ["Acorn Heights", "Airship Fortress", "Boo Cinema", "Bowsers Castle", "Cheep Cheep Falls", "Choco Mountain", "Crown City", "DK Pass", "DK Spaceport",
+          "Dandelion Depths", "Desert Hills", "Dino Dino Jungle", "Dry Bones Burnout", "Faraway Oasis", "Great Q. Block Ruins", "Koopa Troopa Beach",
+          "Mario Bros. Circuit", "Mario Circuit", "Moo Moo Meadows", "Peach Beach", "Peach Stadium", "Rainbow Road", "Salty Salty Speedway", "Shy Guy Bazaar",
+          "Sky-High Sundae", "Starview Peak", "Toads Factory", "Wario Shipyard", "Wario Stadium", "Whistlestop Summit"]
+points = {"12P": [15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+          "24P": [15, 12, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 1]}
 
 r = ResultDict()
 session = []
