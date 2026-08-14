@@ -1,5 +1,6 @@
 # MKW Result Tracker
 This program lets you keep track of your Lounges and your track-specific stats with 2 clicks per race.
+(Connecting tracks are currently not supported. I would recommended just using the track of arrival for your input.)
 
 # Getting Started
 - Download the zip from the latest release
