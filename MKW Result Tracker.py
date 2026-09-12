@@ -5,7 +5,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 def start():
-    global mode, lounge, ModeButton, LoungeButton, SF, TF, PF, LF, MF, AF
+    global mode, lounge, ModeButton, LoungeButton, SF, TF, PF, LF, MF, AF, STF, CTF, TTF
     
     app.title(f"MKW Result Tracker {app.version} - WHOni")
     app.geometry("1585x880+100+100")
@@ -16,14 +16,42 @@ def start():
     White.put(0, 0, 1585, 880)
     
     SF = Frame(app, bg = "#000000") #Settings Frame
-    SF.put(0, 0, 1585, 40)
+    SF.put(675, 0, 910, 40)
     mode = "12P"
     ModeButton = Button(SF, 16, text = mode, bg = "#000000", fg = "#FFFFFF", command = lambda: switch_mode())
-    ModeButton.put(740, 5, 105, 30)
+    ModeButton.put(800, 5, 100, 30)
     
     lounge = False
     LoungeButton = Button(SF, 16, text = f"Start {mode} Lounge", bg = "#000000", fg = "#FFFFFF", command = lambda: start_lounge())
     LoungeButton.put(10, 5, 200, 30)
+    
+    TTF = Frame(app, bg = "#000000") #Track Type Frame
+    TTF.put(0, 0, 670, 40)
+    RegularTracks = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "Regular Tracks", command = lambda: track_type(0))
+    RegularTracks.put(10, 5, 200, 30)
+    SNESTracks = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "SNES Tracks", command = lambda: track_type(1))
+    SNESTracks.put(235, 5, 200, 30)
+    ConnectingTracks = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "Connecting Tracks", command = lambda: track_type(2))
+    ConnectingTracks.put(460, 5, 200, 30)
+    
+    STF = Frame(app, bg = "#000000") #SNES Track Frame
+    STF.put(0, 45, 670, 560)
+    
+    for i, t in enumerate(snes_tracks):
+        TrackButton = Button(STF, text = t, bg = "#000000", fg = "#FFFFFF", command = lambda t=t: select_track(t))
+        TrackButton.put(260, 85 + i * 40, 150, 30)
+        TrackButton.bind("<Button-3>", lambda event, t=t: delete_placement(t))
+    
+    CTF = Frame(app, bg = "#000000") #Connecting Track Frame
+    CTF.put(0, 45, 670, 560)
+    CTF.var["dest"] = None
+    CTF.var["b"] = {}
+    
+    for i, t in enumerate(tracks):
+        TrackButton = Button(CTF, image = trackimages[t], bg = "#000000", command = lambda t=t: select_c_track(t))
+        TrackButton.put(10 + (i % 6) * 110, 10 + (i // 6) * 110, 100, 100)
+        TrackButton.bind("<Button-3>", lambda event, t=t: delete_c_placement(t))
+        CTF.var["b"][t] = TrackButton
     
     TF = Frame(app, bg = "#000000") #Track Frame
     TF.put(0, 45, 670, 560)
@@ -42,11 +70,11 @@ def start():
     
     MF = Frame(app, bg = "#000000") #Most Played Frame
     MF.put(980, 45, 300, 835)
-    most_played()
+    most_played(0)
     
     AF = Frame(app, bg = "#000000") #Averages Frame
     AF.put(1285, 45, 300, 835)
-    averages()
+    averages(0)
         
 def load_images():
     global trackimages
@@ -59,13 +87,22 @@ def load_images():
         except:
             trackimages[t] = None
 
+def track_type(t):
+    match t:
+        case 0:
+            TF.lift()
+        case 1:
+            STF.lift()
+        case _:
+            CTF.lift()
+
 def switch_mode():
     global mode
     
     if lounge: return
     mode = "12P" if mode == "24P" else "24P"
-    most_played()
-    averages()
+    most_played(0)
+    averages(0)
     PF.clear()
     
     ModeButton.config(text = mode)
@@ -82,6 +119,9 @@ def select_track(t):
         PF.clear()
         
     def confirm(p):
+        if t not in r[mode]:
+            r[mode][t] = []
+        
         r[mode][t].append(p)
         r.save()
         PF.clear()
@@ -96,8 +136,8 @@ def select_track(t):
             l.finish_race()
         
         last_races(0)
-        most_played()
-        averages()
+        most_played(0)
+        averages(0)
     
     PF.clear()
     
@@ -133,10 +173,10 @@ def delete_placement(t):
         Confirmation = Label(PF, 16, text = f"Last {mode} Placement for {t} deleted.", bg = "#000000", fg = "#FFFF00")
         Confirmation.put(0, 0, 670, 270)
         
-        most_played()
-        averages()
+        most_played(0)
+        averages(0)
     
-    if len(r[mode][t]) == 0:
+    if t not in r[mode] or len(r[mode][t]) == 0:
         NoPlacements = Label(PF, 16, text = f"No {mode} Placements registered yet on\n{t}.", bg = "#000000", fg = "#FFAAAA")
         NoPlacements.put(0, 0, 670, 270)
     else:
@@ -146,6 +186,21 @@ def delete_placement(t):
         CancelButton.put(225, 220, 100, 40)
         ConfirmButton = Button(PF, 16, text = "Delete", bg = "#000000", fg = "#FF0000", command = lambda: confirm())
         ConfirmButton.put(345, 220, 100, 40)
+
+def select_c_track(t):
+    if CTF.var["dest"] is None:
+        CTF.var["dest"] = t
+        CTF.var["b"][t].config(bg = "#666666")
+    else:
+        select_track(CTF.var["dest"] + " > " + t)
+        CTF.var["b"][CTF.var["dest"]].config(bg = "#000000")
+        CTF.var["dest"] = None
+
+def delete_c_placement(t):
+    if CTF.var["dest"] is not None:
+        delete_placement(CTF.var["dest"] + " > " + t)
+        CTF.var["b"][CTF.var["dest"]].config(bg = "#000000")
+        CTF.var["dest"] = None
 
 def last_races(sc):
     if sc < 0 or len(session) <= sc or lounge: return
@@ -160,7 +215,9 @@ def last_races(sc):
         if x < len(session):
             Mode = Label(LF, 12, text = session[x][0], bg = "#222222", fg = "#FFFFFF")
             Mode.put(5, 30 + i * 26, 50, 22)
-            Track = Label(LF, 12, text = session[x][1], bg = "#222222", fg = "#FFFFFF")
+            s = session[x][1]
+            if ">" in s: s = shorten_track_name(s)
+            Track = Label(LF, 12, text = s, bg = "#222222", fg = "#FFFFFF")
             Track.put(60, 30 + i * 26, 180, 22)
             Place = Label(LF, 12, text = session[x][2], bg = "#222222", fg = "#FFFFFF")
             Place.put(245, 30 + i * 26, 50, 22)
@@ -170,46 +227,73 @@ def last_races(sc):
     ScrollDown = Button(LF, 12, text = "\u2193", bg = "#000000", fg = "#FFFFFF", command = lambda: last_races(sc + 30))
     ScrollDown.put(160, 810, 30, 22)
 
-def most_played():
+def most_played(sc):
+    if sc < 0 or len(r[mode]) <= sc: return
+    
     MF.clear()
     
-    Ranking = [[t, len(r[mode][t])] for t in tracks]
+    Ranking = [[t, len(r[mode][t])] for t in r[mode]]
     Ranking.sort(key = lambda x: -x[1])
     
     Title = Label(MF, 16, text = f"Most Played - {mode}", bg = "#000000", fg = "#FFFFFF")
     Title.put(0, 0, 300, 25)
     
     for i in range(30):
-        Rank = Label(MF, 12, text = f"{i + 1})", bg = "#222222", fg = "#FFFFFF")
-        Rank.put(5, 30 + i * 26, 50, 22)
-        Track = Label(MF, 12, text = Ranking[i][0], bg = "#222222", fg = "#FFFFFF")
-        Track.put(60, 30 + i * 26, 180, 22)
-        Place = Label(MF, 12, text = Ranking[i][1], bg = "#222222", fg = "#FFFFFF")
-        Place.put(245, 30 + i * 26, 50, 22)
+        x = i + sc
+        if x < len(Ranking):
+            Rank = Label(MF, 12, text = f"{x + 1})", bg = "#222222", fg = "#FFFFFF")
+            Rank.put(5, 30 + i * 26, 50, 22)
+            s = Ranking[x][0]
+            if ">" in s: s = shorten_track_name(s)
+            Track = Label(MF, 12, text = s, bg = "#222222", fg = "#FFFFFF")
+            Track.put(60, 30 + i * 26, 180, 22)
+            Place = Label(MF, 12, text = Ranking[x][1], bg = "#222222", fg = "#FFFFFF")
+            Place.put(245, 30 + i * 26, 50, 22)
         
-def averages():
+    ScrollUp = Button(MF, 12, text = "\u2191", bg = "#000000", fg = "#FFFFFF", command = lambda: most_played(sc - 30))
+    ScrollUp.put(110, 810, 30, 22)
+    ScrollDown = Button(MF, 12, text = "\u2193", bg = "#000000", fg = "#FFFFFF", command = lambda: most_played(sc + 30))
+    ScrollDown.put(160, 810, 30, 22)
+        
+def averages(sc):
+    if sc < 0 or len(r[mode]) <= sc: return
+    
     AF.clear()
     
-    Ranking = [[t, sum(r[mode][t]) / len(r[mode][t])] for t in tracks if len(r[mode][t]) != 0]
+    Ranking = [[t, sum(r[mode][t]) / len(r[mode][t])] for t in r[mode] if len(r[mode][t]) != 0]
     Ranking.sort(key = lambda x: x[1])
     
     Title = Label(AF, 16, text = f"Average Places - {mode}", bg = "#000000", fg = "#FFFFFF")
     Title.put(0, 0, 300, 25)
     
     for i in range(30):
-        if i < len(Ranking):
-            Rank = Label(AF, 12, text = f"{i + 1})", bg = "#222222", fg = "#FFFFFF")
+        x = i + sc
+        if x < len(Ranking):
+            Rank = Label(AF, 12, text = f"{x + 1})", bg = "#222222", fg = "#FFFFFF")
             Rank.put(5, 30 + i * 26, 50, 22)
-            Track = Label(AF, 12, text = Ranking[i][0], bg = "#222222", fg = "#FFFFFF")
+            s = Ranking[x][0]
+            if ">" in s: s = shorten_track_name(s)
+            Track = Label(AF, 12, text = s, bg = "#222222", fg = "#FFFFFF")
             Track.put(60, 30 + i * 26, 180, 22)
-            Place = Label(AF, 12, text = round(Ranking[i][1], 2), bg = "#222222", fg = "#FFFFFF")
+            Place = Label(AF, 12, text = round(Ranking[x][1], 2), bg = "#222222", fg = "#FFFFFF")
             Place.put(245, 30 + i * 26, 50, 22)
+            
+    ScrollUp = Button(AF, 12, text = "\u2191", bg = "#000000", fg = "#FFFFFF", command = lambda: averages(sc - 30))
+    ScrollUp.put(110, 810, 30, 22)
+    ScrollDown = Button(AF, 12, text = "\u2193", bg = "#000000", fg = "#FFFFFF", command = lambda: averages(sc + 30))
+    ScrollDown.put(160, 810, 30, 22)
+
+def shorten_track_name(s):
+    for a, b in abbr.items():
+        s = s.replace(a, b)
+        
+    return s
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
         
-        self.version = "v1.1.0"
+        self.version = "v1.2.0"
         self.font = "Calibri"
         
 class Toplevel(tk.Toplevel):
@@ -284,7 +368,7 @@ class Lounge():
         self.mode = mode
         self.races = 0
         self.progress = Label(self.frame, 16, text = f"{mode} Lounge in progress: {self.races} / 12 Races", bg = "#000000", fg = "#00FF00")
-        self.progress.put(0, 0, 1585, 40)
+        self.progress.put(0, 0, 910, 40)
         
         self.ov = Frame(LF, bg = "#000000")
         self.ov.put(0, 0, 300, 835)
@@ -360,14 +444,16 @@ class Lounge():
             
         self.graph()
         
-        most_played()
-        averages()
+        most_played(0)
+        averages(0)
         
     def enter_race(self, rc):
         self.raceframes[rc].clear()
         RaceNumber = Label(self.raceframes[rc], 12, bg = "#220022", fg = "#FFFFFF", text = f"{rc + 1})")
         RaceNumber.put(5, 0, 30, 25)
-        Track = Label(self.raceframes[rc], 12, bg = "#220022", fg = "#FFFFFF", text = self.results[rc][0])
+        s = self.results[rc][0]
+        if ">" in s: s = shorten_track_name(s)
+        Track = Label(self.raceframes[rc], 12, bg = "#220022", fg = "#FFFFFF", text = s)
         Track.put(40, 0, 160, 25)
         Place = Label(self.raceframes[rc], 12, bg = "#220022", fg = "#FFFFFF", text = self.results[rc][1])
         Place.put(205, 0, 40, 25)
@@ -407,8 +493,16 @@ tracks = ["Acorn Heights", "Airship Fortress", "Boo Cinema", "Bowsers Castle", "
           "Dandelion Depths", "Desert Hills", "Dino Dino Jungle", "Dry Bones Burnout", "Faraway Oasis", "Great Q. Block Ruins", "Koopa Troopa Beach",
           "Mario Bros. Circuit", "Mario Circuit", "Moo Moo Meadows", "Peach Beach", "Peach Stadium", "Rainbow Road", "Salty Salty Speedway", "Shy Guy Bazaar",
           "Sky-High Sundae", "Starview Peak", "Toads Factory", "Wario Shipyard", "Wario Stadium", "Whistlestop Summit"]
+snes_tracks = ["Choco Island 1", "Choco Island 2", "Ghost Valley 1", "Ghost Valley 2", "Ghost Valley 3", "Koopa Beach 1",
+               "Mario Circuit 1", "Mario Circuit 2", "Mario Circuit 3", "Vanilla Lake 1"]
 points = {"12P": [15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
           "24P": [15, 12, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 1]}
+abbr = {"Acorn Heights": "Acorn", "Airship Fortress": "Airship", "Boo Cinema": "Cinema", "Bowsers Castle": "Castle", "Cheep Cheep Falls": "CCF",
+        "Choco Mountain": "Choco", "Crown City": "City", "DK Spaceport": "Spaceport", "Dandelion Depths": "D. Depths", "Desert Hills": "Desert",
+        "Dino Dino Jungle": "DDJ", "Dry Bones Burnout": "DBB", "Faraway Oasis": "Oasis", "Great Q. Block Ruins": "Bl. Ruins", "Koopa Troopa Beach": "KT Beach",
+        "Mario Bros. Circuit": "MBC", "Mario Circuit": "M. Circuit", "Moo Moo Meadows": "Moo Moo", "Peach Beach": "P. Beach", "Peach Stadium": "P. Stadium",
+        "Rainbow Road": "R. Road", "Salty Salty Speedway": "SSS", "Shy Guy Bazaar": "Bazaar", "Sky-High Sundae": "Sky-High", "Starview Peak": "St. Peak",
+        "Toads Factory": "Factory", "Wario Shipyard": "Shipyard", "Wario Stadium": "W. Stadium", "Whistlestop Summit": "Wh. Summit"}
 
 r = ResultDict()
 session = []
