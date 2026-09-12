@@ -141,6 +141,13 @@ def select_track(t):
     
     PF.clear()
     
+    if ">" in t:
+        connections = t.split(" > ")
+        if connections[1] not in con[connections[0]]:
+            TrackDoesntExist = Label(PF, 16, text = "This Connecting Track does not exist.", bg = "#000000", fg = "#FFAAAA")
+            TrackDoesntExist.put(0, 0, 670, 270)
+            return
+    
     if lounge and l.races == 12:
         LoungeOver = Label(PF, 16, text = "Your Lounge is over.\nFinish it first before registering another race.", bg = "#000000", fg = "#FFAAAA")
         LoungeOver.put(0, 0, 670, 270)
@@ -175,6 +182,13 @@ def delete_placement(t):
         
         most_played(0)
         averages(0)
+    
+    if ">" in t:
+        connections = t.split(" > ")
+        if connections[1] not in con[connections[0]]:
+            TrackDoesntExist = Label(PF, 16, text = "This Connecting Track does not exist.", bg = "#000000", fg = "#FFAAAA")
+            TrackDoesntExist.put(0, 0, 670, 270)
+            return
     
     if t not in r[mode] or len(r[mode][t]) == 0:
         NoPlacements = Label(PF, 16, text = f"No {mode} Placements registered yet on\n{t}.", bg = "#000000", fg = "#FFAAAA")
@@ -293,7 +307,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         
-        self.version = "v1.2.0"
+        self.version = "v1.2.1"
         self.font = "Calibri"
         
 class Toplevel(tk.Toplevel):
@@ -503,6 +517,36 @@ abbr = {"Acorn Heights": "Acorn", "Airship Fortress": "Airship", "Boo Cinema": "
         "Mario Bros. Circuit": "MBC", "Mario Circuit": "M. Circuit", "Moo Moo Meadows": "Moo Moo", "Peach Beach": "P. Beach", "Peach Stadium": "P. Stadium",
         "Rainbow Road": "R. Road", "Salty Salty Speedway": "SSS", "Shy Guy Bazaar": "Bazaar", "Sky-High Sundae": "Sky-High", "Starview Peak": "St. Peak",
         "Toads Factory": "Factory", "Wario Shipyard": "Shipyard", "Wario Stadium": "W. Stadium", "Whistlestop Summit": "Wh. Summit"}
+con = {"Acorn Heights": ["Boo Cinema", "Dandelion Depths", "Mario Circuit", "Toads Factory", "Dry Bones Burnout"],
+       "Airship Fortress": ["Bowsers Castle", "Dry Bones Burnout", "Toads Factory", "Wario Stadium", "Shy Guy Bazaar"],
+       "Boo Cinema": ["Starview Peak", "Dandelion Depths", "Mario Circuit", "Dry Bones Burnout", "Acorn Heights"],
+       "Bowsers Castle": ["Dry Bones Burnout", "Mario Circuit", "Toads Factory", "Choco Mountain", "Wario Stadium", "Airship Fortress"],
+       "Cheep Cheep Falls": ["Dandelion Depths", "Starview Peak", "DK Pass", "Wario Shipyard", "Salty Salty Speedway", "Faraway Oasis", "Peach Stadium", "Choco Mountain", "Moo Moo Meadows"],
+       "Choco Mountain": ["Toads Factory", "Moo Moo Meadows", "Cheep Cheep Falls", "Peach Stadium", "Crown City", "Whistlestop Summit", "Mario Bros. Circuit", "Shy Guy Bazaar", "Wario Stadium", "Bowsers Castle"],
+       "Crown City": ["Choco Mountain", "Moo Moo Meadows", "Peach Stadium", "Faraway Oasis", "Koopa Troopa Beach", "DK Spaceport", "Whistlestop Summit", "Desert Hills", "Mario Bros. Circuit", "Wario Stadium"],
+       "DK Pass": ["Starview Peak", "Sky-High Sundae", "Wario Shipyard", "Salty Salty Speedway", "Cheep Cheep Falls", "Moo Moo Meadows", "Dandelion Depths"],
+       "DK Spaceport": ["Whistlestop Summit", "Desert Hills", "Mario Bros. Circuit", "Crown City", "Peach Stadium", "Koopa Troopa Beach"],
+       "Dandelion Depths": ["Boo Cinema", "Starview Peak", "Sky-High Sundae", "DK Pass", "Cheep Cheep Falls", "Moo Moo Meadows", "Toads Factory", "Mario Circuit", "Acorn Heights"],
+       "Desert Hills": ["Shy Guy Bazaar", "Mario Bros. Circuit", "Crown City", "Koopa Troopa Beach", "Whistlestop Summit"],
+       "Dino Dino Jungle": ["Koopa Troopa Beach", "Faraway Oasis", "Salty Salty Speedway", "Peach Beach", "Great Q. Block Ruins"],
+       "Dry Bones Burnout": ["Acorn Heights", "Boo Cinema", "Mario Circuit", "Moo Moo Meadows", "Toads Factory", "Wario Stadium", "Airship Fortress", "Bowsers Castle"],
+       "Faraway Oasis": ["Cheep Cheep Falls", "Salty Salty Speedway", "Peach Beach", "Great Q. Block Ruins", "Dino Dino Jungle", "Koopa Troopa Beach", "Crown City", "Peach Stadium"],
+       "Great Q. Block Ruins": ["Dino Dino Jungle", "Koopa Troopa Beach", "Faraway Oasis", "Salty Salty Speedway", "Peach Beach"],
+       "Koopa Troopa Beach": ["DK Spaceport", "Crown City", "Peach Stadium", "Faraway Oasis", "Dino Dino Jungle"],
+       "Mario Bros. Circuit": ["Wario Stadium", "Toads Factory", "Choco Mountain", "Crown City", "Whistlestop Summit", "Desert Hills", "Shy Guy Bazaar"],
+       "Mario Circuit": ["Acorn Heights", "Boo Cinema", "Starview Peak", "Dandelion Depths", "Moo Moo Meadows", "Peach Stadium", "Toads Factory", "Bowsers Castle", "Dry Bones Burnout"],
+       "Moo Moo Meadows": ["Mario Circuit", "Dandelion Depths", "DK Pass", "Cheep Cheep Falls", "Peach Stadium", "Crown City", "Choco Mountain", "Toads Factory", "Dry Bones Burnout"],
+       "Peach Beach": ["Great Q. Block Ruins", "Dino Dino Jungle", "Faraway Oasis", "Salty Salty Speedway", "Wario Shipyard"],
+       "Peach Stadium": ["Moo Moo Meadows", "Cheep Cheep Falls", "Faraway Oasis", "Koopa Troopa Beach", "Crown City", "Choco Mountain", "Toads Factory", "Rainbow Road"],
+       "Rainbow Road": [],
+       "Salty Salty Speedway": ["DK Pass", "Wario Shipyard", "Peach Beach", "Great Q. Block Ruins", "Dino Dino Jungle", "Faraway Oasis", "Cheep Cheep Falls"],
+       "Shy Guy Bazaar": ["Airship Fortress", "Wario Stadium", "Choco Mountain", "Mario Bros. Circuit", "Desert Hills"],
+       "Sky-High Sundae": ["Wario Shipyard", "Salty Salty Speedway", "DK Pass", "Cheep Cheep Falls", "Dandelion Depths", "Starview Peak"],
+       "Starview Peak": ["Sky-High Sundae", "Wario Shipyard", "DK Pass", "Cheep Cheep Falls", "Dandelion Depths", "Mario Circuit", "Boo Cinema"],
+       "Toads Factory": ["Dry Bones Burnout", "Acorn Heights", "Mario Circuit", "Dandelion Depths", "Moo Moo Meadows", "Peach Stadium", "Choco Mountain", "Mario Bros. Circuit", "Wario Stadium", "Airship Fortress", "Bowsers Castle"],
+       "Wario Shipyard": ["Peach Beach", "Salty Salty Speedway", "Cheep Cheep Falls", "DK Pass", "Starview Peak", "Sky-High Sundae"],
+       "Wario Stadium": ["Bowsers Castle", "Dry Bones Burnout", "Toads Factory", "Choco Mountain", "Crown City", "Mario Bros. Circuit", "Shy Guy Bazaar", "Airship Fortress"],
+       "Whistlestop Summit": ["Desert Hills", "Mario Bros. Circuit", "Choco Mountain", "Crown City", "Koopa Troopa Beach", "DK Spaceport"]}
 
 r = ResultDict()
 session = []
