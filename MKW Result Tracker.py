@@ -5,7 +5,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 def start():
-    global mode, lounge, ModeButton, LoungeButton, SF, TF, PF, LF, MF, AF, STF, CTF, TTF
+    global mode, lounge, ModeButton, LoungeButton, SF, TF, PF, LF, MF, AF, STF, CTF, TTF, TGF, BWTF
     
     app.title(f"MKW Result Tracker {app.version} - WHOni")
     app.geometry("1585x880+100+100")
@@ -27,12 +27,22 @@ def start():
     
     TTF = Frame(app, bg = "#000000") #Track Type Frame
     TTF.put(0, 0, 670, 40)
-    RegularTracks = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "Regular Tracks", command = lambda: track_type(0))
-    RegularTracks.put(10, 5, 200, 30)
-    SNESTracks = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "SNES Tracks", command = lambda: track_type(1))
-    SNESTracks.put(235, 5, 200, 30)
-    ConnectingTracks = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "Connecting Tracks", command = lambda: track_type(2))
-    ConnectingTracks.put(460, 5, 200, 30)
+    TTF.w["RegularTracks"] = Button(TTF, 16, bg = "#000000", fg = "#00FFFF", text = "Regular Tracks", command = lambda: track_type(0))
+    TTF.w["RegularTracks"].put(0, 0, 168, 40)
+    TTF.w["SNESTracks"] = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "SNES Tracks", command = lambda: track_type(1))
+    TTF.w["SNESTracks"].put(168, 0, 167, 40)
+    TTF.w["ConnectingTracks"] = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "Connecting Tracks", command = lambda: track_type(2))
+    TTF.w["ConnectingTracks"].put(335, 0, 168, 40)
+    TTF.w["v1.9.0Tracks"] = Button(TTF, 16, bg = "#000000", fg = "#FFFFFF", text = "v1.9.0 Tracks", command = lambda: track_type(3))
+    TTF.w["v1.9.0Tracks"].put(503, 0, 167, 40)
+    
+    BWTF = Frame(app, bg = "#000000") #v1.9.0 Track Frame
+    BWTF.put(0, 45, 670, 560)
+    
+    for i, t in enumerate(bw_tracks):
+        TrackButton = Button(BWTF, text = t, bg = "#000000", fg = "#FFFFFF", command = lambda t=t: select_track(t))
+        TrackButton.put(235, 125 + i * 40, 200, 30)
+        TrackButton.bind("<Button-3>", lambda event, t=t: delete_placement(t))
     
     STF = Frame(app, bg = "#000000") #SNES Track Frame
     STF.put(0, 45, 670, 560)
@@ -75,6 +85,9 @@ def start():
     AF = Frame(app, bg = "#000000") #Averages Frame
     AF.put(1285, 45, 300, 835)
     averages(0)
+    
+    #TGF = Frame(app, bg = "#000000") #Track Graph Frame
+    #TGF.put(0, 885, 1585, 120)
         
 def load_images():
     global trackimages
@@ -93,8 +106,15 @@ def track_type(t):
             TF.lift()
         case 1:
             STF.lift()
-        case _:
+        case 2:
             CTF.lift()
+        case _:
+            BWTF.lift()
+            
+    TTF.w["RegularTracks"].config(fg = "#00FFFF" if t == 0 else "#FFFFFF")
+    TTF.w["SNESTracks"].config(fg = "#00FFFF" if t == 1 else "#FFFFFF")
+    TTF.w["ConnectingTracks"].config(fg = "#00FFFF" if t == 2 else "#FFFFFF")
+    TTF.w["v1.9.0Tracks"].config(fg = "#00FFFF" if t == 3 else "#FFFFFF")
 
 def switch_mode():
     global mode
@@ -164,6 +184,8 @@ def select_track(t):
         for p in range(12):
             Place = Button(PF, 32, text = p + 1, bg = "#000000", fg = "#FFFFFF", command = lambda p=p: confirm(p + 1))
             Place.put(10 + (p % 6) * 110, 30 + (p // 6) * 100, 100, 90)
+            
+    #track_graph(t)
             
     CancelButton = Button(PF, 16, text = "Cancel", bg = "#000000", fg = "#FF0000", command = lambda: cancel())
     CancelButton.put(285, 230, 100, 30)
@@ -259,7 +281,7 @@ def most_played(sc):
             Rank.put(5, 30 + i * 26, 50, 22)
             s = Ranking[x][0]
             if ">" in s: s = shorten_track_name(s)
-            Track = Label(MF, 12, text = s, bg = "#222222", fg = "#FFFFFF")
+            Track = Button(MF, 12, text = s, bg = "#222222", fg = "#FFFFFF", relief = "flat", command = lambda tr=Ranking[x][0]: select_track(tr))
             Track.put(60, 30 + i * 26, 180, 22)
             Place = Label(MF, 12, text = Ranking[x][1], bg = "#222222", fg = "#FFFFFF")
             Place.put(245, 30 + i * 26, 50, 22)
@@ -287,7 +309,7 @@ def averages(sc):
             Rank.put(5, 30 + i * 26, 50, 22)
             s = Ranking[x][0]
             if ">" in s: s = shorten_track_name(s)
-            Track = Label(AF, 12, text = s, bg = "#222222", fg = "#FFFFFF")
+            Track = Button(AF, 12, text = s, bg = "#222222", fg = "#FFFFFF", relief = "flat", command = lambda tr=Ranking[x][0]: select_track(tr))
             Track.put(60, 30 + i * 26, 180, 22)
             Place = Label(AF, 12, text = round(Ranking[x][1], 2), bg = "#222222", fg = "#FFFFFF")
             Place.put(245, 30 + i * 26, 50, 22)
@@ -296,6 +318,31 @@ def averages(sc):
     ScrollUp.put(110, 810, 30, 22)
     ScrollDown = Button(AF, 12, text = "\u2193", bg = "#000000", fg = "#FFFFFF", command = lambda: averages(sc + 30))
     ScrollDown.put(160, 810, 30, 22)
+
+def track_graph(t):
+    TGF.clear()
+    
+    if t in r[mode] and len(r[mode][t]) > 1:
+        fig = Figure(figsize = (10, 8), dpi = 100, facecolor = "#111111")
+        fig.subplots_adjust(left = 0.02, right = 0.98, top = 0.95, bottom = 0.2)
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_facecolor("#222222")
+        
+        ax.set_ylim(12 if mode == "12P" else 24, 1)
+        yticks = [1, 6, 12] if mode == "12P" else [1, 6, 12, 18, 24]
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticks, color = "#FFFFFF")
+        
+        ax.set_xlim(0, len(r[mode][t]) - 1)
+        ax.grid(True, axis = "both", linestyle = "--", linewidth = 0.2, alpha = 0.8)
+        
+        ax.tick_params(axis = "both", colors = "#FFFFFF")
+        
+        ax.plot([x for x in range(len(r[mode][t]))], r[mode][t], color = "#00FFFF", linewidth = 1)
+        
+        canvas = FigureCanvasTkAgg(fig, master = TGF)
+        canvas.draw()
+        canvas.get_tk_widget().place(x = 0, y = 0, width = 1585, height = 120)
 
 def shorten_track_name(s):
     for a, b in abbr.items():
@@ -307,7 +354,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         
-        self.version = "v1.2.1"
+        self.version = "v1.3"
         self.font = "Calibri"
         
 class Toplevel(tk.Toplevel):
@@ -509,6 +556,8 @@ tracks = ["Acorn Heights", "Airship Fortress", "Boo Cinema", "Bowsers Castle", "
           "Sky-High Sundae", "Starview Peak", "Toads Factory", "Wario Shipyard", "Wario Stadium", "Whistlestop Summit"]
 snes_tracks = ["Choco Island 1", "Choco Island 2", "Ghost Valley 1", "Ghost Valley 2", "Ghost Valley 3", "Koopa Beach 1",
                "Mario Circuit 1", "Mario Circuit 2", "Mario Circuit 3", "Vanilla Lake 1"]
+bw_tracks = ["Airship Fortress 2", "Desert Hills 2", "DK Pass 2", "Koopa Troopa Beach 2",
+             "Mario Bros. Circuit 2", "Shy Guy Bazaar 2", "Salty Salty Speedway 2", "Wario Stadium 2"]
 points = {"12P": [15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
           "24P": [15, 12, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 1]}
 abbr = {"Acorn Heights": "Acorn", "Airship Fortress": "Airship", "Boo Cinema": "Cinema", "Bowsers Castle": "Castle", "Cheep Cheep Falls": "CCF",
